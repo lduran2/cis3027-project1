@@ -6,15 +6,29 @@
 #include <string.h>
 #include <stdbool.h>
 
+
+
 int
 main(int argc, char* *argv)
 {
 	int strfci(char, const size_t, char*);
 	int arrstr(const size_t, char*, const size_t, char**);
 
-	typedef struct Process {
-		int id;
-	} Process;
+	typedef int Process;
+	const Process SIMULATION = -1;
+
+	typedef enum Action {
+		ARRIVES,
+		ENTERS_CPU, ENTERS_DISK1, ENTERS_DISK2, ENTERS_NETWORK,
+		FINISH_CPU, FINISH_DISK1, FINISH_DISK2, FINISH_NETWORK,
+		TERMINATES
+	} Action;
+
+	typedef struct Event {
+		Process process;
+		Action action;
+		struct Event *next;
+	} Event;
 
 	long int SEED;
 
@@ -119,6 +133,11 @@ main(int argc, char* *argv)
 	NETWORK_MAX = int_const_values[12];
 	QUIT_PROB = dbl_const_values[0];
 	NETWORK_PROB = dbl_const_values[1];
+
+	Event event_queue[FIN_TIME + 1];
+	event_queue[FIN_TIME].process = SIMULATION;
+	event_queue[FIN_TIME].action = TERMINATES;
+	event_queue[FIN_TIME].next = NULL;
 
 	return 0;
 }
