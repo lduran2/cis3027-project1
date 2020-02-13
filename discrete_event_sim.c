@@ -28,7 +28,7 @@ typedef int Process;
 
 /* the event structure */
 typedef struct Event {
-	int time;
+	long int time;
 	Process process;
 	Action action;
 } Event;
@@ -74,9 +74,9 @@ PrtyQu* prqnew() {
 void prqins(PrtyQu* queue, PQNode* new_element)
 {
 	PQNode* position = queue->pre_head;
-	// printf("%d\t%d\t%d\n", queue, queue->pre_head, queue->pre_head->next);
 	for (;
 		(position->next != queue->pre_head)
+			/* be sure to compare to *next* position */
 			&& (position->next->data->time <= new_element->data->time);
 		position = position->next)
 	{
@@ -137,6 +137,11 @@ typedef enum DblConstIndex {
 // +2 because there are 2 arrays.
 const size_t N_CONST_KEYS = (I_NETWORK_MAX + I_NETWORK_PROB + 2);
 
+long int
+irndom(long int min, long int max) {
+	return (long int)((((double)random())/RAND_MAX)*(max - min) + max);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -191,7 +196,7 @@ main(int argc, char **argv)
 
 
 	/* logical time of simulation */
-	int t;
+	long int t;
 
 	FILE *config_file = fopen("sim.config", "r");
 	rdcfgk(config_file, int_const_values, dbl_const_values);
@@ -213,18 +218,16 @@ main(int argc, char **argv)
 	QUIT_PROB = dbl_const_values[I_QUIT_PROB];
 	NETWORK_PROB = dbl_const_values[I_NETWORK_PROB];
 
-	PrtyQu* queue = prqnew();
-	prqins(queue, pqnnew(evnew(50, 1, ARRIVES)));
-	prqins(queue, pqnnew(evnew(200, 2, ARRIVES)));
-	prqins(queue, pqnnew(evnew(25, 3, ARRIVES)));
-	prqins(queue, pqnnew(evnew(250, 4, ARRIVES)));
-	prqins(queue, pqnnew(evnew(50, 5, ARRIVES)));
-	prqins(queue, pqnnew(evnew(10, 6, ARRIVES)));
-	prqins(queue, pqnnew(evnew(275, -1, ARRIVES)));
+	long int t_next_arrival = INIT_TIME;
+	srandom(SEED);
 
-	char* queue_string = "";
-	pq2str(&queue_string, *queue);
-	printf("%s", queue_string);
+	for (t = INIT_TIME; t < FIN_TIME; ++t) {
+		if (t >= t_next_arrival) {
+			printf("arrival at t = %20ld!\n", t);
+			t_next_arrival
+				= t + irndom(ARRIVE_MIN, ARRIVE_MAX);
+		}
+	}
 
 	return 0;
 }
@@ -303,7 +306,7 @@ int
 ev2str(char **pstr, Event event)
 {
 	char* JOB_FORMAT = "Job #%3d";
-	char* EVENT_FORMAT = "t = %10d: %3s %s.";
+	char* EVENT_FORMAT = "t = %10ld: %3s %s.";
 
 	char* JOB_NAME = NULL;
 	Process process_id = event.process;
