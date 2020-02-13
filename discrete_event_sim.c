@@ -43,7 +43,7 @@ typedef struct PrtyQu {
 	PQNode* pre_head;
 } PrtyQu;
 
-Event* evnew(int time, Process process, Action action) {
+Event *evnew(int time, Process process, Action action) {
 	Event* event = (Event*)malloc(sizeof(Event));
 	event->time = time;
 	event->process = process;
@@ -51,7 +51,7 @@ Event* evnew(int time, Process process, Action action) {
 	return event;
 }
 
-PQNode* pqnnew(Event* data)
+PQNode *pqnnew(Event* data)
 {
 	PQNode *node = (PQNode*)malloc(sizeof(PQNode));
 	node->data = data;
@@ -60,7 +60,7 @@ PQNode* pqnnew(Event* data)
 	return node;
 }
 
-PrtyQu* prqnew() {
+PrtyQu *prqnew() {
 	PQNode* pqnnew(Event*);
 
 	PrtyQu *queue = (PrtyQu*)malloc(sizeof(PrtyQu));
@@ -73,7 +73,7 @@ PrtyQu* prqnew() {
 
 void prqins(PrtyQu* queue, PQNode* new_element)
 {
-	PQNode* position = queue->pre_head;
+	PQNode *position = queue->pre_head;
 	for (;
 		(position->next != queue->pre_head)
 			/* be sure to compare to *next* position */
@@ -117,6 +117,47 @@ int pq2str(char **pstr, PrtyQu queue)
 	return sum;
 }
 
+/* these handle the FIFO queues */
+typedef struct FFQNod {
+	Event *data;
+	struct FFQNod *next;
+} FFQNod;
+
+typedef struct FFOQue {
+	FFQNod *pre_head;
+	FFQNod *tail;
+} FFOQue;
+
+FFQNod *ffnnew(Event* data)
+{
+	FFQNod *node = (FFQNod*)malloc(sizeof(FFQNod));
+	node->data = data;
+	node->next = NULL;
+	return node;
+}
+
+FFOQue* ffqnew() {
+	FFQNod* ffnnew(Event*);
+
+	FFOQue *queue = (FFOQue*)malloc(sizeof(FFOQue));
+	FFQNod *pre_head = ffnnew(NULL);
+	queue->pre_head = pre_head;
+	queue->tail = pre_head;
+	return queue;
+}
+
+void ffqenq(FFOQue *queue, FFQNod *new_element) {
+	queue->tail->next = new_element;
+	queue->tail = new_element;
+}
+
+FFQNod *ffqdeq(FFOQue *queue) {
+	FFQNod *dequeued = queue->pre_head->next;
+	queue->pre_head->next = queue->pre_head->next->next;
+	return dequeued;
+}
+
+
 /* these deal with constant configuration */
 char *const_keys[] = {
 	"SEED", "INIT_TIME", "FIN_TIME", "ARRIVE_MIN", "ARRIVE_MAX",	/* 0:4 */ 
@@ -145,8 +186,8 @@ irndom(long int min, long int max) {
 int
 main(int argc, char **argv)
 {
-	//void prqins(PrtyQu, PQNode*);
 	int pq2str(char**, PrtyQu);
+	int ev2str(char**, Event);
 	bool rdcfgk(FILE*, int[], double[]);
 
 	const Process SIMULATION = -1;
@@ -218,16 +259,43 @@ main(int argc, char **argv)
 	QUIT_PROB = dbl_const_values[I_QUIT_PROB];
 	NETWORK_PROB = dbl_const_values[I_NETWORK_PROB];
 
+	FFOQue* queue = ffqnew();
+	ffqenq(queue, ffnnew(evnew(50, 1, ARRIVES)));
+	ffqenq(queue, ffnnew(evnew(200, 2, ARRIVES)));
+	ffqenq(queue, ffnnew(evnew(25, 3, ARRIVES)));
+	ffqenq(queue, ffnnew(evnew(250, 4, ARRIVES)));
+	ffqenq(queue, ffnnew(evnew(50, 5, ARRIVES)));
+	ffqenq(queue, ffnnew(evnew(10, 6, ARRIVES)));
+	ffqenq(queue, ffnnew(evnew(275, -1, ARRIVES)));
+
+	char *data = NULL;
+	ev2str(&data, *evnew(50, 1, ARRIVES));
+	printf("%s\n", data);
+
+	for (int k = 8; k > 0; --k) {
+		ev2str(&data, *ffqdeq(queue)->data);
+		printf("%s\n", data);
+	}
+	return;
+
 	long int t_next_arrival = INIT_TIME;
+	int i_job = SIMULATION;
 	srandom(SEED);
+
+	PrtyQu *priorities = prqnew();
 
 	for (t = INIT_TIME; t < FIN_TIME; ++t) {
 		if (t >= t_next_arrival) {
-			printf("arrival at t = %20ld!\n", t);
+			++i_job;
+			prqins(priorities, pqnnew(evnew(t, i_job, ARRIVES)));
+			// printf("arrival at t = %20ld!\n", t);
 			t_next_arrival
 				= t + irndom(ARRIVE_MIN, ARRIVE_MAX);
 		}
 	}
+	char *queue_string = "";
+	pq2str(&queue_string, *priorities);
+	printf("%s", queue_string);
 
 	return 0;
 }
